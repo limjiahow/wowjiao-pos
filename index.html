@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WOWJIAO 摆摊 POS 系统 (云端同步版)</title>
+  <title>WOWJIAO 摆摊 POS 系统 (安全加密版)</title>
   <style>
     :root {
       --primary: #d9381e;
@@ -30,6 +30,44 @@
       overflow: hidden;
     }
 
+    /* 锁屏遮罩 */
+    #lockScreen {
+      position: fixed;
+      inset: 0;
+      background: rgba(17, 24, 39, 0.96);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    #lockScreen.unlocked { display: none; }
+    .lock-card {
+      background: #fff;
+      padding: 28px 24px;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    }
+    .lock-icon { font-size: 2.6rem; margin-bottom: 8px; }
+    .lock-title { font-size: 1.25rem; font-weight: 800; margin-bottom: 6px; }
+    .lock-sub { font-size: 0.84rem; color: var(--muted); margin-bottom: 16px; }
+    .pin-input {
+      width: 100%;
+      padding: 12px;
+      font-size: 1.4rem;
+      letter-spacing: 6px;
+      text-align: center;
+      font-weight: 800;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+    .pin-input:focus { outline: none; border-color: var(--primary); }
+
     /* 顶部栏 */
     header {
       background: #111827;
@@ -45,13 +83,12 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      font-size: 1.2rem;
+      font-size: 1.15rem;
       font-weight: 800;
-      letter-spacing: 0.5px;
     }
     .brand span.badge {
       background: var(--primary);
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       padding: 2px 8px;
       border-radius: 999px;
       font-weight: 600;
@@ -59,11 +96,11 @@
     .header-actions {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
     }
     .sync-status {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       padding: 4px 10px;
       border-radius: 999px;
       background: #374151;
@@ -86,11 +123,11 @@
       background: #374151;
       color: #fff;
       border: 1px solid #4b5563;
-      padding: 7px 13px;
+      padding: 6px 11px;
       border-radius: 8px;
       cursor: pointer;
       font-weight: 600;
-      font-size: 0.88rem;
+      font-size: 0.84rem;
       transition: 0.15s;
     }
     .btn-top:hover { background: #4b5563; }
@@ -119,7 +156,7 @@
       padding: 12px 14px;
       border-bottom: 1px solid var(--border);
       font-weight: 700;
-      font-size: 1rem;
+      font-size: 0.98rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -133,11 +170,10 @@
 
     /* 左栏：菜单 */
     .category-title {
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       font-weight: 700;
       color: var(--muted);
       margin: 6px 0 8px;
-      text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     .menu-grid {
@@ -163,12 +199,11 @@
       transform: translateY(-1px);
       box-shadow: 0 4px 10px rgba(217, 56, 30, 0.12);
     }
-    .menu-card:active { transform: scale(0.98); }
-    .menu-name { font-weight: 700; font-size: 0.96rem; margin-bottom: 4px; }
-    .menu-sub { font-size: 0.76rem; color: var(--muted); margin-bottom: 8px; }
+    .menu-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+    .menu-sub { font-size: 0.75rem; color: var(--muted); margin-bottom: 8px; }
     .menu-price { font-weight: 800; color: var(--primary); font-size: 1.05rem; }
 
-    /* 中栏：购物车与结账 */
+    /* 中栏：购物车 */
     .order-meta {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -197,10 +232,7 @@
       font-weight: 600;
       font-size: 0.85rem;
     }
-    .toggle-btn.active {
-      background: #111827;
-      color: #fff;
-    }
+    .toggle-btn.active { background: #111827; color: #fff; }
     .queue-input {
       width: 100%;
       padding: 6px 10px;
@@ -230,4 +262,1274 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 8
+      padding: 8px 4px;
+      border-bottom: 1px solid #f3f4f6;
+      gap: 8px;
+    }
+    .cart-item-info { flex: 1; }
+    .cart-item-title { font-weight: 700; font-size: 0.9rem; }
+    .cart-item-detail { font-size: 0.76rem; color: var(--muted); margin-top: 2px; }
+    .cart-item-ctrl { display: flex; align-items: center; gap: 6px; }
+    .qty-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #f9fafb;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .cart-item-price { font-weight: 700; min-width: 62px; text-align: right; font-size: 0.9rem; }
+
+    .quick-remarks {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .remark-chip {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #f9fafb;
+      font-size: 0.78rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .remark-chip.active {
+      background: #fef3c7;
+      border-color: var(--accent);
+      color: #92400e;
+    }
+    .remark-input {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 10px;
+    }
+
+    .pay-section {
+      background: #f9fafb;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.15rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .total-amount { color: var(--primary); font-size: 1.35rem; }
+    .cash-calc {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+      align-items: center;
+    }
+    .cash-input {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-weight: 700;
+    }
+    .change-display {
+      text-align: right;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--success);
+    }
+    .btn-submit {
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .btn-submit:hover { background: var(--primary-dark); }
+
+    /* 右栏：KDS */
+    .kds-list { display: flex; flex-direction: column; gap: 10px; }
+    .kds-card {
+      border: 2px solid #111827;
+      border-radius: 12px;
+      padding: 12px;
+      background: #fffbeb;
+    }
+    .kds-card.served {
+      border-color: var(--border);
+      background: #f9fafb;
+      opacity: 0.72;
+    }
+    .kds-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px dashed #d1d5db;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+    }
+    .kds-number { font-size: 1.45rem; font-weight: 900; color: var(--primary); }
+    .kds-badge {
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: #111827;
+      color: #fff;
+    }
+    .kds-badge.takeaway { background: var(--info); }
+    .kds-items { list-style: none; margin-bottom: 8px; }
+    .kds-items li { font-size: 0.96rem; font-weight: 700; padding: 3px 0; }
+    .kds-items li span.sub {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: #4b5563;
+      padding-left: 10px;
+    }
+    .kds-remark {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .kds-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btn-kds {
+      flex: 1;
+      padding: 7px 8px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 700;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+    .btn-serve { background: var(--success); color: #fff; flex: 1.4; }
+    .btn-edit { background: #e0e7ff; color: #1e40af; }
+    .btn-del { background: #fee2e2; color: #b91c1c; flex: 0.7; }
+
+    /* 弹窗 */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+      padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 14px;
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
+    }
+    .modal.wide { max-width: 820px; }
+    .modal-header {
+      padding: 14px 18px;
+      background: #111827;
+      color: #fff;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-close { background: none; border: none; color: #fff; font-size: 1.3rem; cursor: pointer; }
+    .modal-body { padding: 16px 18px; overflow-y: auto; flex: 1; }
+    .modal-footer {
+      padding: 12px 18px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      background: #f9fafb;
+    }
+
+    .flavor-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .flavor-counter { display: flex; align-items: center; gap: 10px; }
+    .flavor-counter button {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: #f9fafb;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .stat-card {
+      background: #f9fafb;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+    }
+    .stat-label { font-size: 0.76rem; color: var(--muted); }
+    .stat-val { font-size: 1.15rem; font-weight: 800; color: #111827; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { padding: 8px 6px; border-bottom: 1px solid var(--border); text-align: left; }
+    th { background: #f3f4f6; font-weight: 700; }
+
+    @media (max-width: 1024px) {
+      body { height: auto; overflow: auto; }
+      .main-grid { grid-template-columns: 1fr; overflow: visible; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 安全锁屏层 -->
+<div id="lockScreen">
+  <div class="lock-card">
+    <div class="lock-icon">🔐</div>
+    <div class="lock-title">WOWJIAO 摊位安全验证</div>
+    <div class="lock-sub">请输入店员安全密码（默认 8888，可在云端设置中修改）</div>
+    <input type="password" id="unlockPinInput" class="pin-input" maxlength="10" placeholder="••••" onkeydown="if(event.key==='Enter') attemptUnlock()" />
+    <div id="lockErrorMsg" style="color:var(--danger);font-size:0.82rem;min-height:18px;margin-bottom:8px;"></div>
+    <button class="btn-submit" style="margin-top:0;" onclick="attemptUnlock()">解锁进入收银系统</button>
+  </div>
+</div>
+
+<header>
+  <div class="brand">
+    🥟 WOWJIAO 摆摊 POS
+    <span class="badge">加密保护版</span>
+  </div>
+  <div class="header-actions">
+    <div class="sync-status" id="syncStatusBox" title="Google Sheets 同步状态">
+      <span class="sync-dot" id="syncDot"></span>
+      <span id="syncText">仅本地存储</span>
+    </div>
+    <button class="btn-top" onclick="manualPullSync()">🔄 立即同步</button>
+    <button class="btn-top" onclick="openCloudModal()">☁️ 云端与密码</button>
+    <button class="btn-top primary" onclick="openSalesModal()">📜 今日销售</button>
+    <button class="btn-top" onclick="lockSystem()" title="离开摊位一键锁屏">🔒 锁屏</button>
+  </div>
+</header>
+
+<div class="main-grid">
+  <!-- 左栏：菜单 -->
+  <section class="panel">
+    <div class="panel-header">
+      <span>🥟 菜品点餐菜单</span>
+      <span style="font-size:0.78rem;color:var(--muted);">点击选择做法与口味</span>
+    </div>
+    <div class="panel-body">
+      <div class="category-title">招牌水饺 / 煎饺（支持口味混搭）</div>
+      <div class="menu-grid" id="dumplingMenuGrid"></div>
+
+      <div class="category-title">特色面食（每碗均附送 2 粒水饺）</div>
+      <div class="menu-grid" id="noodleMenuGrid"></div>
+    </div>
+  </section>
+
+  <!-- 中栏：购物车与结账 -->
+  <section class="panel">
+    <div class="panel-header">
+      <span>🛒 当前点单</span>
+      <button onclick="clearCart()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:0.82rem;font-weight:700;">清空</button>
+    </div>
+    <div class="panel-body" style="display:flex;flex-direction:column;justify-content:space-between;">
+      <div>
+        <div class="order-meta">
+          <div class="meta-box">
+            <label>用餐方式</label>
+            <div class="toggle-group">
+              <button class="toggle-btn active" id="typeDineIn" onclick="setOrderType('堂食')">堂食</button>
+              <button class="toggle-btn" id="typeTakeaway" onclick="setOrderType('外卖/打包')">外卖/打包</button>
+            </div>
+          </div>
+          <div class="meta-box">
+            <label>号码牌</label>
+            <input type="text" id="queueNumberInput" class="queue-input" value="A01" />
+          </div>
+        </div>
+
+        <div class="cart-list" id="cartList">
+          <div class="cart-empty">请从左侧点击菜品加入订单</div>
+        </div>
+
+        <div class="quick-remarks" id="quickRemarks">
+          <span class="remark-chip" onclick="toggleRemarkChip(this, '加辣椒')">🌶️ 加辣椒</span>
+          <span class="remark-chip" onclick="toggleRemarkChip(this, '加醋')">🍶 加醋</span>
+          <span class="remark-chip" onclick="toggleRemarkChip(this, '辣椒放旁边')">🥡 辣椒放旁边</span>
+          <span class="remark-chip" onclick="toggleRemarkChip(this, '不要辣')">🚫 不要辣</span>
+          <span class="remark-chip" onclick="toggleRemarkChip(this, '打包')">🛍️ 打包</span>
+        </div>
+        <input type="text" id="remarkInput" class="remark-input" placeholder="补充特殊备注（如：多汁、少面）..." />
+      </div>
+
+      <div class="pay-section">
+        <div class="total-row">
+          <span>应收总额</span>
+          <span class="total-amount" id="cartTotal">RM 0.00</span>
+        </div>
+
+        <div class="toggle-group" style="margin-bottom:8px;">
+          <button class="toggle-btn active" id="payCash" onclick="setPaymentMethod('Cash')">💵 Cash 现金</button>
+          <button class="toggle-btn" id="payTng" onclick="setPaymentMethod('TNG')">📱 TNG 电子钱包</button>
+        </div>
+
+        <div class="cash-calc" id="cashCalcRow">
+          <div>
+            <input type="number" step="0.5" id="cashReceivedInput" class="cash-input" placeholder="实收现金 (RM)" oninput="calcChange()" />
+          </div>
+          <div class="change-display" id="changeDisplay">找零: RM 0.00</div>
+        </div>
+
+        <button class="btn-submit" onclick="submitOrder()">✅ 下单并发送至后厨</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 右栏：后厨实时出餐大屏 KDS -->
+  <section class="panel">
+    <div class="panel-header">
+      <span>👨‍🍳 后厨实时出餐大屏 (KDS)</span>
+      <span id="pendingCountBadge" style="background:var(--primary);color:#fff;padding:2px 8px;border-radius:999px;font-size:0.78rem;">待出餐: 0</span>
+    </div>
+    <div class="panel-body">
+      <div class="kds-list" id="kdsList"></div>
+    </div>
+  </section>
+</div>
+
+<!-- 弹窗 1：饺子口味 / 做法选择 -->
+<div class="modal-backdrop" id="flavorModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span id="flavorModalTitle">选择口味配比</span>
+      <button class="modal-close" onclick="closeModal('flavorModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="cookMethodSection" style="margin-bottom:14px;">
+        <label style="font-weight:700;font-size:0.88rem;display:block;margin-bottom:6px;">烹饪方式：</label>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="methodBoiled" onclick="selectCookMethod('水饺')">🥟 水饺</button>
+          <button class="toggle-btn" id="methodFried" onclick="selectCookMethod('煎饺')">🍳 煎饺</button>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-weight:700;font-size:0.9rem;">分配口味粒数：</span>
+        <span id="flavorQuotaText" style="font-weight:800;color:var(--primary);">已选 0 / 6 粒</span>
+      </div>
+
+      <div id="flavorRowsContainer"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-top" onclick="closeModal('flavorModal')">取消</button>
+      <button class="btn-top primary" onclick="confirmFlavorSelection()">确认加入</button>
+    </div>
+  </div>
+</div>
+
+<!-- 弹窗 2：实时修改已下单订单 -->
+<div class="modal-backdrop" id="editOrderModal">
+  <div class="modal wide">
+    <div class="modal-header">
+      <span id="editModalTitle">✏️ 修改订单</span>
+      <button class="modal-close" onclick="closeModal('editOrderModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:0.78rem;font-weight:700;">号码牌</label>
+          <input type="text" id="editQueueNum" class="queue-input" />
+        </div>
+        <div>
+          <label style="font-size:0.78rem;font-weight:700;">用餐方式</label>
+          <select id="editOrderType" class="queue-input">
+            <option value="堂食">堂食</option>
+            <option value="外卖/打包">外卖/打包</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.78rem;font-weight:700;">付款方式</label>
+          <select id="editPayMethod" class="queue-input">
+            <option value="Cash">Cash</option>
+            <option value="TNG">TNG</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label style="font-size:0.78rem;font-weight:700;display:block;margin-bottom:4px;">订单备注</label>
+        <div class="quick-remarks" style="margin-bottom:6px;">
+          <span class="remark-chip" onclick="appendEditRemark('加辣椒')">🌶️ 加辣椒</span>
+          <span class="remark-chip" onclick="appendEditRemark('加醋')">🍶 加醋</span>
+          <span class="remark-chip" onclick="appendEditRemark('辣椒放旁边')">🥡 辣椒放旁边</span>
+          <span class="remark-chip" onclick="appendEditRemark('不要辣')">🚫 不要辣</span>
+          <span class="remark-chip" onclick="appendEditRemark('打包')">🛍️ 打包</span>
+        </div>
+        <input type="text" id="editRemarkInput" class="remark-input" style="margin-bottom:0;" />
+      </div>
+
+      <div style="font-weight:700;font-size:0.9rem;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+        <span>已点菜品明细：</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="remark-chip" onclick="addItemInEditMode('d3')">+3粒饺子</button>
+          <button class="remark-chip" onclick="addItemInEditMode('d6')">+6粒饺子</button>
+          <button class="remark-chip" onclick="addItemInEditMode('d8')">+8粒饺子</button>
+          <button class="remark-chip" onclick="addItemInEditMode('n1')">+冬菇拉面</button>
+          <button class="remark-chip" onclick="addItemInEditMode('n2')">+干捞板面</button>
+          <button class="remark-chip" onclick="addItemInEditMode('n3')">+擂椒皮蛋面</button>
+        </div>
+      </div>
+
+      <div id="editItemsContainer" style="border:1px solid var(--border);border-radius:8px;padding:8px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-top" onclick="closeModal('editOrderModal')">取消</button>
+      <button class="btn-top primary" onclick="saveEditedOrder()">💾 保存修改并同步</button>
+    </div>
+  </div>
+</div>
+
+<!-- 弹窗 3：今日销售统计与 CSV 导出 -->
+<div class="modal-backdrop" id="salesModal">
+  <div class="modal wide">
+    <div class="modal-header">
+      <span>📜 今日销售分析与流水明细</span>
+      <button class="modal-close" onclick="closeModal('salesModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="stats-grid" id="salesStatsGrid"></div>
+      <div id="flavorBreakdownBox" style="background:#fffbeb;border:1px solid #fde68a;padding:10px;border-radius:8px;margin-bottom:12px;font-size:0.86rem;"></div>
+      <table>
+        <thead>
+          <tr>
+            <th>时间</th>
+            <th>号牌</th>
+            <th>类型</th>
+            <th>菜品明细</th>
+            <th>备注</th>
+            <th>支付</th>
+            <th>金额</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="salesTableBody"></tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-top" style="background:var(--danger);border-color:var(--danger);" onclick="clearAllOrdersToday()">清空本地记录</button>
+      <button class="btn-top primary" onclick="exportCSV()">📥 导出 CSV 报表</button>
+    </div>
+  </div>
+</div>
+
+<!-- 弹窗 4：Google Sheet 云端同步与安全密码设置 -->
+<div class="modal-backdrop" id="cloudModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span>☁️ 云端同步与安全密码设置</span>
+      <button class="modal-close" onclick="closeModal('cloudModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label style="font-weight:700;font-size:0.85rem;display:block;margin-bottom:4px;">1. 安全访问密码 (PIN)：</label>
+      <input type="text" id="secretPinInput" class="remark-input" placeholder="必须与 Code.gs 中的 SECRET_PIN 一致（默认 8888）" />
+
+      <label style="font-weight:700;font-size:0.85rem;display:block;margin-bottom:4px;">2. Google Apps Script Webhook URL：</label>
+      <input type="text" id="webhookUrlInput" class="remark-input" placeholder="https://script.google.com/macros/s/xxxx/exec" />
+
+      <p style="font-size:0.8rem;color:var(--muted);line-height:1.45;">
+        提示：所有云端读取与写入请求都会自动携带上述密码校验，密码不匹配时 Google Sheet 将直接拒绝访问。
+      </p>
+      <div id="testResultMsg" style="font-size:0.84rem;margin-top:8px;font-weight:600;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-top" onclick="testWebhookConnection()">⚡ 测试密码与连接</button>
+      <button class="btn-top primary" onclick="saveCloudAndPinSettings()">保存设置</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const MENU_ITEMS = [
+    { id: 'd3', name: '水饺 / 煎饺 (3粒)', category: 'dumpling', pieces: 3, price: 5.00, desc: '可选水饺或煎饺，支持混搭口味' },
+    { id: 'd6', name: '水饺 / 煎饺 (6粒)', category: 'dumpling', pieces: 6, price: 10.00, desc: '可选水饺或煎饺，支持混搭口味' },
+    { id: 'd8', name: '水饺 / 煎饺 (8粒)', category: 'dumpling', pieces: 8, price: 12.00, desc: '超值8粒装，支持混搭口味' },
+    { id: 'n1', name: '冬菇肉酱拉面', category: 'noodle', pieces: 2, price: 10.00, desc: '附送 2 粒水饺（可选口味）' },
+    { id: 'n2', name: '干捞板面', category: 'noodle', pieces: 2, price: 10.00, desc: '附送 2 粒水饺（可选口味）' },
+    { id: 'n3', name: '擂椒皮蛋面', category: 'noodle', pieces: 2, price: 12.00, desc: '附送 2 粒水饺（可选口味）' }
+  ];
+
+  const FLAVORS = ['韭菜猪肉', '玉米猪肉', '白菜猪肉'];
+
+  let cart = [];
+  let currentOrderType = '堂食';
+  let currentPayMethod = 'Cash';
+  let selectedRemarks = new Set();
+  let orders = JSON.parse(localStorage.getItem('wowjiao_orders_v2') || '[]');
+  let queueCounter = parseInt(localStorage.getItem('wowjiao_queue_counter') || '1', 10);
+  let webhookUrl = localStorage.getItem('wowjiao_webhook_url') || '';
+  let secretPin = localStorage.getItem('wowjiao_secret_pin') || '8888';
+
+  let activeMenuItem = null;
+  let activeCookMethod = '水饺';
+  let flavorCounts = {};
+  let flavorModalContext = 'cart';
+  let editingItemIndex = -1;
+  let editingOrderObj = null;
+
+  window.addEventListener('DOMContentLoaded', () => {
+    // 如果本标签页已解锁过，直接进入；否则显示锁屏
+    if (sessionStorage.getItem('wowjiao_unlocked') === '1') {
+      document.getElementById('lockScreen').classList.add('unlocked');
+    }
+
+    renderMenu();
+    updateQueueInputDisplay();
+    renderCart();
+    renderKDS();
+    document.getElementById('webhookUrlInput').value = webhookUrl;
+    document.getElementById('secretPinInput').value = secretPin;
+    updateSyncUI(webhookUrl ? 'online' : 'offline', webhookUrl ? '已连接云端' : '仅本地存储');
+
+    if (webhookUrl && sessionStorage.getItem('wowjiao_unlocked') === '1') {
+      manualPullSync();
+    }
+    setInterval(() => {
+      if (
+        webhookUrl &&
+        sessionStorage.getItem('wowjiao_unlocked') === '1' &&
+        !document.querySelector('.modal-backdrop.open')
+      ) {
+        manualPullSync(true);
+      }
+    }, 4000);
+  });
+
+  // 安全解锁逻辑
+  async function attemptUnlock() {
+    const entered = document.getElementById('unlockPinInput').value.trim();
+    const errEl = document.getElementById('lockErrorMsg');
+    if (!entered) {
+      errEl.textContent = '请输入安全密码';
+      return;
+    }
+
+    // 如果已配置云端 URL，优先向后端校验密码；否则校验本地保存的 PIN
+    if (webhookUrl) {
+      errEl.style.color = '#d97706';
+      errEl.textContent = '正在向云端核对密码...';
+      try {
+        const res = await fetch(`${webhookUrl}?pin=${encodeURIComponent(entered)}`);
+        const data = await res.json();
+        if (data && data.status === 'ok') {
+          secretPin = entered;
+          localStorage.setItem('wowjiao_secret_pin', secretPin);
+          sessionStorage.setItem('wowjiao_unlocked', '1');
+          document.getElementById('lockScreen').classList.add('unlocked');
+          document.getElementById('secretPinInput').value = secretPin;
+          if (Array.isArray(data.orders)) {
+            orders = data.orders;
+            saveOrdersLocally();
+            renderKDS();
+          }
+          updateSyncUI('online', '云端已验证同步');
+        } else {
+          errEl.style.color = 'var(--danger)';
+          errEl.textContent = '❌ 密码错误，云端拒绝访问';
+        }
+      } catch (e) {
+        // 离线兜底校验本地 PIN
+        if (entered === secretPin) {
+          sessionStorage.setItem('wowjiao_unlocked', '1');
+          document.getElementById('lockScreen').classList.add('unlocked');
+        } else {
+          errEl.style.color = 'var(--danger)';
+          errEl.textContent = '❌ 密码错误（当前网络异常）';
+        }
+      }
+    } else {
+      if (entered === secretPin) {
+        sessionStorage.setItem('wowjiao_unlocked', '1');
+        document.getElementById('lockScreen').classList.add('unlocked');
+        errEl.textContent = '';
+      } else {
+        errEl.style.color = 'var(--danger)';
+        errEl.textContent = '❌ 密码错误，请重新输入';
+      }
+    }
+  }
+
+  function lockSystem() {
+    sessionStorage.removeItem('wowjiao_unlocked');
+    document.getElementById('unlockPinInput').value = '';
+    document.getElementById('lockErrorMsg').textContent = '';
+    document.getElementById('lockScreen').classList.remove('unlocked');
+  }
+
+  function renderMenu() {
+    const dGrid = document.getElementById('dumplingMenuGrid');
+    const nGrid = document.getElementById('noodleMenuGrid');
+    dGrid.innerHTML = '';
+    nGrid.innerHTML = '';
+
+    MENU_ITEMS.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'menu-card';
+      card.onclick = () => openFlavorModal(item, 'cart');
+      card.innerHTML = `
+        <div>
+          <div class="menu-name">${item.name}</div>
+          <div class="menu-sub">${item.desc}</div>
+        </div>
+        <div class="menu-price">RM ${item.price.toFixed(2)}</div>
+      `;
+      if (item.category === 'dumpling') dGrid.appendChild(card);
+      else nGrid.appendChild(card);
+    });
+  }
+
+  function openFlavorModal(menuItem, context = 'cart', existingItem = null, itemIdx = -1) {
+    activeMenuItem = menuItem;
+    flavorModalContext = context;
+    editingItemIndex = itemIdx;
+
+    const isDumpling = menuItem.category === 'dumpling';
+    document.getElementById('cookMethodSection').style.display = isDumpling ? 'block' : 'none';
+    activeCookMethod = existingItem ? existingItem.cookMethod : '水饺';
+    selectCookMethod(activeCookMethod);
+
+    document.getElementById('flavorModalTitle').textContent = isDumpling
+      ? `${menuItem.name} - 选择做法与口味`
+      : `${menuItem.name} - 选择附送 ${menuItem.pieces} 粒水饺口味`;
+
+    flavorCounts = {};
+    FLAVORS.forEach(f => flavorCounts[f] = 0);
+
+    if (existingItem && existingItem.flavors) {
+      Object.assign(flavorCounts, existingItem.flavors);
+    } else {
+      flavorCounts[FLAVORS[0]] = menuItem.pieces;
+    }
+
+    renderFlavorRows();
+    document.getElementById('flavorModal').classList.add('open');
+  }
+
+  function selectCookMethod(method) {
+    activeCookMethod = method;
+    document.getElementById('methodBoiled').classList.toggle('active', method === '水饺');
+    document.getElementById('methodFried').classList.toggle('active', method === '煎饺');
+  }
+
+  function renderFlavorRows() {
+    const container = document.getElementById('flavorRowsContainer');
+    container.innerHTML = '';
+    const totalSelected = Object.values(flavorCounts).reduce((a, b) => a + b, 0);
+    const target = activeMenuItem.pieces;
+
+    document.getElementById('flavorQuotaText').textContent = `已选 ${totalSelected} / ${target} 粒`;
+    document.getElementById('flavorQuotaText').style.color = totalSelected === target ? 'var(--success)' : 'var(--primary)';
+
+    FLAVORS.forEach(flavor => {
+      const row = document.createElement('div');
+      row.className = 'flavor-row';
+      row.innerHTML = `
+        <span style="font-weight:700;">${flavor}</span>
+        <div class="flavor-counter">
+          <button onclick="adjustFlavor('${flavor}', -1)">-</button>
+          <span style="min-width:24px;text-align:center;font-weight:800;">${flavorCounts[flavor]}</span>
+          <button onclick="adjustFlavor('${flavor}', 1)">+</button>
+        </div>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  function adjustFlavor(flavor, delta) {
+    const totalSelected = Object.values(flavorCounts).reduce((a, b) => a + b, 0);
+    const target = activeMenuItem.pieces;
+    if (delta > 0 && totalSelected >= target) return;
+    if (delta < 0 && flavorCounts[flavor] <= 0) return;
+    flavorCounts[flavor] += delta;
+    renderFlavorRows();
+  }
+
+  function confirmFlavorSelection() {
+    const totalSelected = Object.values(flavorCounts).reduce((a, b) => a + b, 0);
+    const target = activeMenuItem.pieces;
+    if (totalSelected !== target) {
+      alert(`请选择刚好 ${target} 粒水饺口味（当前已选 ${totalSelected} 粒）`);
+      return;
+    }
+
+    const flavorSummary = Object.entries(flavorCounts)
+      .filter(([, cnt]) => cnt > 0)
+      .map(([f, cnt]) => `${f}x${cnt}`)
+      .join(', ');
+
+    const displayName = activeMenuItem.category === 'dumpling'
+      ? `${activeCookMethod} (${target}粒)`
+      : activeMenuItem.name;
+
+    const detailText = activeMenuItem.category === 'dumpling'
+      ? flavorSummary
+      : `附送水饺: ${flavorSummary}`;
+
+    const builtItem = {
+      menuId: activeMenuItem.id,
+      name: displayName,
+      category: activeMenuItem.category,
+      cookMethod: activeCookMethod,
+      piecesPerUnit: target,
+      flavors: { ...flavorCounts },
+      detailText,
+      price: activeMenuItem.price,
+      qty: 1
+    };
+
+    if (flavorModalContext === 'cart') {
+      cart.push(builtItem);
+      renderCart();
+    } else if (flavorModalContext === 'edit' && editingOrderObj) {
+      if (editingItemIndex >= 0) {
+        builtItem.qty = editingOrderObj.items[editingItemIndex].qty;
+        editingOrderObj.items[editingItemIndex] = builtItem;
+      } else {
+        editingOrderObj.items.push(builtItem);
+      }
+      renderEditItems();
+    }
+
+    closeModal('flavorModal');
+  }
+
+  function setOrderType(type) {
+    currentOrderType = type;
+    document.getElementById('typeDineIn').classList.toggle('active', type === '堂食');
+    document.getElementById('typeTakeaway').classList.toggle('active', type === '外卖/打包');
+  }
+
+  function setPaymentMethod(method) {
+    currentPayMethod = method;
+    document.getElementById('payCash').classList.toggle('active', method === 'Cash');
+    document.getElementById('payTng').classList.toggle('active', method === 'TNG');
+    document.getElementById('cashCalcRow').style.display = method === 'Cash' ? 'grid' : 'none';
+  }
+
+  function toggleRemarkChip(el, text) {
+    el.classList.toggle('active');
+    if (selectedRemarks.has(text)) selectedRemarks.delete(text);
+    else selectedRemarks.add(text);
+  }
+
+  function renderCart() {
+    const list = document.getElementById('cartList');
+    if (cart.length === 0) {
+      list.innerHTML = '<div class="cart-empty">请从左侧点击菜品加入订单</div>';
+      document.getElementById('cartTotal').textContent = 'RM 0.00';
+      calcChange();
+      return;
+    }
+
+    list.innerHTML = '';
+    let total = 0;
+    cart.forEach((item, idx) => {
+      const subTotal = item.price * item.qty;
+      total += subTotal;
+      const div = document.createElement('div');
+      div.className = 'cart-item';
+      div.innerHTML = `
+        <div class="cart-item-info">
+          <div class="cart-item-title">${item.name}</div>
+          <div class="cart-item-detail">${item.detailText}</div>
+        </div>
+        <div class="cart-item-ctrl">
+          <button class="qty-btn" onclick="changeCartQty(${idx}, -1)">-</button>
+          <span style="font-weight:700;min-width:18px;text-align:center;">${item.qty}</span>
+          <button class="qty-btn" onclick="changeCartQty(${idx}, 1)">+</button>
+        </div>
+        <div class="cart-item-price">RM ${subTotal.toFixed(2)}</div>
+      `;
+      list.appendChild(div);
+    });
+
+    document.getElementById('cartTotal').textContent = `RM ${total.toFixed(2)}`;
+    calcChange();
+  }
+
+  function changeCartQty(idx, delta) {
+    cart[idx].qty += delta;
+    if (cart[idx].qty <= 0) cart.splice(idx, 1);
+    renderCart();
+  }
+
+  function clearCart() {
+    cart = [];
+    selectedRemarks.clear();
+    document.querySelectorAll('#quickRemarks .remark-chip').forEach(c => c.classList.remove('active'));
+    document.getElementById('remarkInput').value = '';
+    document.getElementById('cashReceivedInput').value = '';
+    renderCart();
+  }
+
+  function calcChange() {
+    const total = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+    const received = parseFloat(document.getElementById('cashReceivedInput').value || '0');
+    const change = Math.max(0, received - total);
+    document.getElementById('changeDisplay').textContent = `找零: RM ${change.toFixed(2)}`;
+  }
+
+  function updateQueueInputDisplay() {
+    document.getElementById('queueNumberInput').value = 'A' + String(queueCounter).padStart(2, '0');
+  }
+
+  function submitOrder() {
+    if (cart.length === 0) {
+      alert('购物车为空，请先选择菜品！');
+      return;
+    }
+    const total = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+    const customText = document.getElementById('remarkInput').value.trim();
+    const allRemarks = [...selectedRemarks];
+    if (customText) allRemarks.push(customText);
+
+    const newOrder = {
+      id: 'ORD-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      timestamp: new Date().toLocaleTimeString('zh-CN', { hour12: false }),
+      dateStr: new Date().toISOString().slice(0, 10),
+      queueNumber: document.getElementById('queueNumberInput').value.trim() || ('A' + queueCounter),
+      orderType: currentOrderType,
+      paymentMethod: currentPayMethod,
+      remarks: allRemarks.join(' | '),
+      items: JSON.parse(JSON.stringify(cart)),
+      total: total,
+      status: 'pending',
+      updatedAt: Date.now()
+    };
+
+    orders.unshift(newOrder);
+    saveOrdersLocally();
+
+    queueCounter++;
+    localStorage.setItem('wowjiao_queue_counter', queueCounter);
+    updateQueueInputDisplay();
+    clearCart();
+    renderKDS();
+
+    pushSyncAction('create', newOrder);
+  }
+
+  function saveOrdersLocally() {
+    localStorage.setItem('wowjiao_orders_v2', JSON.stringify(orders));
+  }
+
+  function renderKDS() {
+    const container = document.getElementById('kdsList');
+    const pendingOrders = orders.filter(o => o.status === 'pending');
+    const servedOrders = orders.filter(o => o.status === 'served').slice(0, 8);
+    document.getElementById('pendingCountBadge').textContent = `待出餐: ${pendingOrders.length}`;
+
+    const displayList = [...pendingOrders, ...servedOrders];
+    if (displayList.length === 0) {
+      container.innerHTML = '<div class="cart-empty">暂无订单，等待前台下单...</div>';
+      return;
+    }
+
+    container.innerHTML = '';
+    displayList.forEach(order => {
+      const isServed = order.status === 'served';
+      const card = document.createElement('div');
+      card.className = `kds-card ${isServed ? 'served' : ''}`;
+
+      const itemsHtml = order.items.map(it => `
+        <li>
+          ${it.name} × ${it.qty}
+          <span class="sub">${it.detailText}</span>
+        </li>
+      `).join('');
+
+      card.innerHTML = `
+        <div class="kds-top">
+          <div>
+            <span class="kds-number">#${order.queueNumber}</span>
+            <span style="font-size:0.78rem;color:var(--muted);margin-left:6px;">${order.timestamp} · ${order.paymentMethod}</span>
+          </div>
+          <span class="kds-badge ${order.orderType !== '堂食' ? 'takeaway' : ''}">${order.orderType}</span>
+        </div>
+        <ul class="kds-items">${itemsHtml}</ul>
+        ${order.remarks ? `<div class="kds-remark">📝 备注：${order.remarks}</div>` : ''}
+        <div class="kds-actions">
+          ${!isServed
+            ? `<button class="btn-kds btn-serve" onclick="markOrderServed('${order.id}')">✅ 标记出餐</button>`
+            : `<button class="btn-kds" style="background:#e5e7eb;color:#374151;" onclick="reopenOrder('${order.id}')">↩️ 恢复待出餐</button>`
+          }
+          <button class="btn-kds btn-edit" onclick="openEditOrderModal('${order.id}')">✏️ 修改订单</button>
+          <button class="btn-kds btn-del" onclick="deleteOrder('${order.id}')">🗑️ 删除</button>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  function markOrderServed(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    order.status = 'served';
+    order.updatedAt = Date.now();
+    saveOrdersLocally();
+    renderKDS();
+    pushSyncAction('serve', order);
+  }
+
+  function reopenOrder(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    order.status = 'pending';
+    order.updatedAt = Date.now();
+    saveOrdersLocally();
+    renderKDS();
+    pushSyncAction('update', order);
+  }
+
+  function deleteOrder(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    const ok = confirm(`确定要删除号码牌【#${order.queueNumber}】(RM ${order.total.toFixed(2)}) 吗？\n删除后将同步扣除销售额与水饺/面食销量！`);
+    if (!ok) return;
+
+    orders = orders.filter(o => o.id !== orderId);
+    saveOrdersLocally();
+    renderKDS();
+    if (document.getElementById('salesModal').classList.contains('open')) {
+      renderSalesModal();
+    }
+    pushSyncAction('delete', { id: orderId });
+  }
+
+  function openEditOrderModal(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    editingOrderObj = JSON.parse(JSON.stringify(order));
+
+    document.getElementById('editModalTitle').textContent = `✏️ 修改订单 #${editingOrderObj.queueNumber}`;
+    document.getElementById('editQueueNum').value = editingOrderObj.queueNumber;
+    document.getElementById('editOrderType').value = editingOrderObj.orderType;
+    document.getElementById('editPayMethod').value = editingOrderObj.paymentMethod;
+    document.getElementById('editRemarkInput').value = editingOrderObj.remarks || '';
+
+    renderEditItems();
+    document.getElementById('editOrderModal').classList.add('open');
+  }
+
+  function appendEditRemark(text) {
+    const input = document.getElementById('editRemarkInput');
+    const current = input.value.trim();
+    if (!current) input.value = text;
+    else if (!current.includes(text)) input.value = current + ' | ' + text;
+  }
+
+  function renderEditItems() {
+    const container = document.getElementById('editItemsContainer');
+    container.innerHTML = '';
+    editingOrderObj.items.forEach((item, idx) => {
+      const row = document.createElement('div');
+      row.className = 'cart-item';
+      row.innerHTML = `
+        <div class="cart-item-info">
+          <div class="cart-item-title">${item.name} (RM ${(item.price * item.qty).toFixed(2)})</div>
+          <div class="cart-item-detail">${item.detailText}</div>
+        </div>
+        <div class="cart-item-ctrl">
+          <button class="remark-chip" onclick="reselectItemFlavorInEdit(${idx})">🥟 改口味/做法</button>
+          <button class="qty-btn" onclick="changeEditItemQty(${idx}, -1)">-</button>
+          <span style="font-weight:700;">${item.qty}</span>
+          <button class="qty-btn" onclick="changeEditItemQty(${idx}, 1)">+</button>
+        </div>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  function reselectItemFlavorInEdit(idx) {
+    const item = editingOrderObj.items[idx];
+    const menuDef = MENU_ITEMS.find(m => m.id === item.menuId) || MENU_ITEMS[0];
+    openFlavorModal(menuDef, 'edit', item, idx);
+  }
+
+  function addItemInEditMode(menuId) {
+    const menuDef = MENU_ITEMS.find(m => m.id === menuId);
+    if (menuDef) openFlavorModal(menuDef, 'edit', null, -1);
+  }
+
+  function changeEditItemQty(idx, delta) {
+    editingOrderObj.items[idx].qty += delta;
+    if (editingOrderObj.items[idx].qty <= 0) {
+      if (editingOrderObj.items.length === 1) {
+        alert('订单至少保留一项菜品，如需整单取消请点击“删除”按钮。');
+        editingOrderObj.items[idx].qty = 1;
+        return;
+      }
+      editingOrderObj.items.splice(idx, 1);
+    }
+    renderEditItems();
+  }
+
+  function saveEditedOrder() {
+    if (!editingOrderObj || editingOrderObj.items.length === 0) return;
+    editingOrderObj.queueNumber = document.getElementById('editQueueNum').value.trim() || editingOrderObj.queueNumber;
+    editingOrderObj.orderType = document.getElementById('editOrderType').value;
+    editingOrderObj.paymentMethod = document.getElementById('editPayMethod').value;
+    editingOrderObj.remarks = document.getElementById('editRemarkInput').value.trim();
+    editingOrderObj.total = editingOrderObj.items.reduce((sum, i) => sum + i.price * i.qty, 0);
+    editingOrderObj.updatedAt = Date.now();
+
+    const idx = orders.findIndex(o => o.id === editingOrderObj.id);
+    if (idx !== -1) {
+      orders[idx] = editingOrderObj;
+      saveOrdersLocally();
+      renderKDS();
+      if (document.getElementById('salesModal').classList.contains('open')) {
+        renderSalesModal();
+      }
+      pushSyncAction('update', editingOrderObj);
+    }
+    closeModal('editOrderModal');
+  }
+
+  function openSalesModal() {
+    renderSalesModal();
+    document.getElementById('salesModal').classList.add('open');
+  }
+
+  function renderSalesModal() {
+    let totalRev = 0, cashRev = 0, tngRev = 0;
+    let totalDumplings = 0, totalNoodles = 0;
+    const flavorTotals = { '韭菜猪肉': 0, '玉米猪肉': 0, '白菜猪肉': 0 };
+
+    orders.forEach(o => {
+      totalRev += o.total;
+      if (o.paymentMethod === 'Cash') cashRev += o.total;
+      else tngRev += o.total;
+
+      o.items.forEach(it => {
+        if (it.category === 'noodle') totalNoodles += it.qty;
+        if (it.flavors) {
+          Object.entries(it.flavors).forEach(([f, cnt]) => {
+            const pieces = cnt * it.qty;
+            totalDumplings += pieces;
+            flavorTotals[f] = (flavorTotals[f] || 0) + pieces;
+          });
+        }
+      });
+    });
+
+    document.getElementById('salesStatsGrid').innerHTML = `
+      <div class="stat-card"><div class="stat-label">今日总营业额</div><div class="stat-val" style="color:var(--primary);">RM ${totalRev.toFixed(2)}</div></div>
+      <div class="stat-card"><div class="stat-label">Cash / TNG</div><div class="stat-val" style="font-size:0.95rem;">RM ${cashRev.toFixed(2)} / RM ${tngRev.toFixed(2)}</div></div>
+      <div class="stat-card"><div class="stat-label">饺子总消耗 (含附送)</div><div class="stat-val">${totalDumplings} 粒</div></div>
+      <div class="stat-card"><div class="stat-label">面食总销量</div><div class="stat-val">${totalNoodles} 碗</div></div>
+    `;
+
+    document.getElementById('flavorBreakdownBox').innerHTML = `
+      <strong>🥟 各口味饺子总消耗明细：</strong>
+      韭菜猪肉 <b>${flavorTotals['韭菜猪肉']}</b> 粒 ｜ 
+      玉米猪肉 <b>${flavorTotals['玉米猪肉']}</b> 粒 ｜ 
+      白菜猪肉 <b>${flavorTotals['白菜猪肉']}</b> 粒
+    `;
+
+    const tbody = document.getElementById('salesTableBody');
+    tbody.innerHTML = '';
+    orders.forEach(o => {
+      const itemsStr = o.items.map(i => `${i.name}x${i.qty}(${i.detailText})`).join('; ');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${o.timestamp}</td>
+        <td><strong>#${o.queueNumber}</strong></td>
+        <td>${o.orderType}</td>
+        <td>${itemsStr}</td>
+        <td>${o.remarks || '-'}</td>
+        <td>${o.paymentMethod}</td>
+        <td><strong>RM ${o.total.toFixed(2)}</strong></td>
+        <td style="white-space:nowrap;">
+          <button class="remark-chip" onclick="openEditOrderModal('${o.id}')">✏️</button>
+          <button class="remark-chip" style="color:#b91c1c;" onclick="deleteOrder('${o.id}')">🗑️</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function exportCSV() {
+    if (orders.length === 0) return alert('暂无销售数据可导出');
+    const headers = ['订单ID', '日期', '时间', '号码牌', '用餐方式', '支付方式', '菜品明细', '备注', '总金额(RM)', '状态'];
+    const rows = orders.map(o => [
+      o.id,
+      o.dateStr || '',
+      o.timestamp,
+      o.queueNumber,
+      o.orderType,
+      o.paymentMethod,
+      '"' + o.items.map(i => `${i.name}x${i.qty}[${i.detailText}]`).join(' ; ').replace(/"/g, '""') + '"',
+      '"' + (o.remarks || '').replace(/"/g, '""') + '"',
+      o.total.toFixed(2),
+      o.status
+    ]);
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `WOWJIAO_销售报表_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+  }
+
+  function clearAllOrdersToday() {
+    if (!confirm('确定清空当前浏览器中的所有订单记录吗？（不影响已写入 Google Sheet 的历史行）')) return;
+    orders = [];
+    queueCounter = 1;
+    localStorage.setItem('wowjiao_queue_counter', '1');
+    saveOrdersLocally();
+    updateQueueInputDisplay();
+    renderKDS();
+    renderSalesModal();
+  }
+
+  // 云端与安全密码配置
+  function openCloudModal() {
+    document.getElementById('testResultMsg').textContent = '';
+    document.getElementById('secretPinInput').value = secretPin;
+    document.getElementById('webhookUrlInput').value = webhookUrl;
+    document.getElementById('cloudModal').classList.add('open');
+  }
+
+  function saveCloudAndPinSettings() {
+    const newPin = document.getElementById('secretPinInput').value.trim();
+    if (!newPin) {
+      alert('安全密码不能为空');
+      return;
+    }
+    secretPin = newPin;
+    webhookUrl = document.getElementById('webhookUrlInput').value.trim();
+    localStorage.setItem('wowjiao_secret_pin', secretPin);
+    localStorage.setItem('wowjiao_webhook_url', webhookUrl);
+    closeModal('cloudModal');
+    if (webhookUrl) {
+      manualPullSync();
+    } else {
+      updateSyncUI('offline', '仅本地存储');
+    }
+  }
+
+  async function testWebhookConnection() {
+    const url = document.getElementById('webhookUrlInput').value.trim();
+    const pin = document.getElementById('secretPinInput').value.trim();
+    const msgEl = document.getElementById('testResultMsg');
+    if (!url || !pin) {
+      msgEl.style.color = 'var(--danger)';
+      msgEl.textContent = '请完整填写安全密码与 Apps Script 网址';
+      return;
+    }
+    msgEl.style.color = '#d97706';
+    msgEl.textContent = '正在测试密码与云端连接...';
+    try {
+      const res = await fetch(`${url}?pin=${encodeURIComponent(pin)}`);
+      const data = await res.json();
+      if (data && data.status === 'ok') {
+        msgEl.style.color = 'var(--success)';
+        msgEl.textContent = `✅ 验证通过！云端当前共有 ${data.orders ? data.orders.length : 0} 条订单。`;
+      } else {
+        msgEl.style.color = 'var(--danger)';
+        msgEl.textContent = `❌ ${data.message || '安全密码不匹配'}`;
+      }
+    } catch (err) {
+      msgEl.style.color = 'var(--danger)';
+      msgEl.textContent = '❌ 连接失败，请检查网址是否以 /exec 结尾，且部署权限为“所有人”。';
+    }
+  }
+
+  async function pushSyncAction(action, payload) {
+    if (!webhookUrl) return;
+    updateSyncUI('syncing', '正在同步...');
+    try {
+      await fetch(webhookUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ pin: secretPin, action, order: payload })
+      });
+      updateSyncUI('online', '已加密同步');
+    } catch (e) {
+      updateSyncUI('error', '同步异常');
+    }
+  }
+
+  async function manualPullSync(silent = false) {
+    if (!webhookUrl) {
+      if (!silent) alert('请先点击“☁️ 云端与密码”配置 Google Apps Script URL');
+      return;
+    }
+    if (!silent) updateSyncUI('syncing', '拉取云端中...');
+    try {
+      const res = await fetch(`${webhookUrl}?pin=${encodeURIComponent(secretPin)}`);
+      const data = await res.json();
+      if (data && data.status === 'ok' && Array.isArray(data.orders)) {
+        orders = data.orders;
+        saveOrdersLocally();
+        renderKDS();
+        if (document.getElementById('salesModal').classList.contains('open')) {
+          renderSalesModal();
+        }
+        updateSyncUI('online', '云端已同步 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false }));
+      } else {
+        updateSyncUI('error', '密码错误/拒绝访问');
+      }
+    } catch (e) {
+      updateSyncUI('error', '云端拉取失败');
+    }
+  }
+
+  function updateSyncUI(state, text) {
+    const dot = document.getElementById('syncDot');
+    dot.className = 'sync-dot';
+    if (state === 'online') dot.classList.add('online');
+    else if (state === 'syncing') dot.classList.add('syncing');
+    else if (state === 'error') dot.classList.add('error');
+    document.getElementById('syncText').textContent = text;
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+</script>
+</body>
+</html>
