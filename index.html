@@ -468,8 +468,8 @@
       padding: 10px 0;
       border-bottom: 1px solid var(--border);
     }
-    .flavor-counter { display: flex; align-items: center; gap: 10px; }
-    .flavor-counter button {
+    .flavor-counter { display: flex; align-items: center; gap: 8px; }
+    .flavor-counter button.step-btn {
       width: 32px;
       height: 32px;
       border-radius: 8px;
@@ -479,6 +479,17 @@
       cursor: pointer;
       background: #f9fafb;
     }
+    .btn-fill-all {
+      padding: 4px 9px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      background: #f3f4f6;
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: #374151;
+      cursor: pointer;
+    }
+    .btn-fill-all:hover { background: #e5e7eb; }
 
     .stats-grid {
       display: grid;
@@ -636,7 +647,10 @@
 
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <span style="font-weight:700;font-size:0.9rem;">分配口味粒数：</span>
-        <span id="flavorQuotaText" style="font-weight:800;color:var(--primary);">已选 0 / 6 粒</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="btn-fill-all" onclick="resetFlavorCounts()">清零重选</button>
+          <span id="flavorQuotaText" style="font-weight:800;color:var(--primary);">已选 0 / 6 粒</span>
+        </div>
       </div>
 
       <div id="flavorRowsContainer"></div>
@@ -780,7 +794,6 @@
     { id: 'n3', name: '擂椒皮蛋面', category: 'noodle', pieces: 2, price: 12.00, desc: '附送 2 粒水饺（可选口味）' }
   ];
 
-  // 新增“香菇猪肉”口味
   const FLAVORS = ['韭菜猪肉', '玉米猪肉', '白菜猪肉', '香菇猪肉'];
 
   function getLocalDateStr() {
@@ -940,16 +953,26 @@
     flavorCounts = {};
     FLAVORS.forEach(f => flavorCounts[f] = 0);
 
+    // 如果是修改已有订单明细，恢复原来的配比；如果是新点单，全部从 0 开始自己选
     if (existingItem && existingItem.flavors) {
       FLAVORS.forEach(f => {
         flavorCounts[f] = existingItem.flavors[f] || 0;
       });
-    } else {
-      flavorCounts[FLAVORS[0]] = menuItem.pieces;
     }
 
     renderFlavorRows();
     document.getElementById('flavorModal').classList.add('open');
+  }
+
+  function resetFlavorCounts() {
+    FLAVORS.forEach(f => flavorCounts[f] = 0);
+    renderFlavorRows();
+  }
+
+  function fillAllFlavor(targetFlavor) {
+    FLAVORS.forEach(f => flavorCounts[f] = 0);
+    flavorCounts[targetFlavor] = activeMenuItem.pieces;
+    renderFlavorRows();
   }
 
   function selectCookMethod(method) {
@@ -973,9 +996,10 @@
       row.innerHTML = `
         <span style="font-weight:700;">${flavor}</span>
         <div class="flavor-counter">
-          <button onclick="adjustFlavor('${flavor}', -1)">-</button>
+          <button class="btn-fill-all" onclick="fillAllFlavor('${flavor}')">全选</button>
+          <button class="step-btn" onclick="adjustFlavor('${flavor}', -1)">-</button>
           <span style="min-width:24px;text-align:center;font-weight:800;">${flavorCounts[flavor]}</span>
-          <button onclick="adjustFlavor('${flavor}', 1)">+</button>
+          <button class="step-btn" onclick="adjustFlavor('${flavor}', 1)">+</button>
         </div>
       `;
       container.appendChild(row);
