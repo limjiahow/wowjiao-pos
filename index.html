@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WOWJIAO 摆摊 POS 系统 (按日分表+日结版)</title>
+  <title>WOWJIAO 摆摊 POS 系统 (付款状态+按日分表版)</title>
   <style>
     :root {
       --primary: #d9381e;
@@ -224,10 +224,14 @@
       border: none;
       background: #fff;
       cursor: pointer;
-      font-weight: 600;
-      font-size: 0.85rem;
+      font-weight: 700;
+      font-size: 0.84rem;
+      transition: 0.12s;
     }
     .toggle-btn.active { background: #111827; color: #fff; }
+    .toggle-btn.paid-active { background: var(--success); color: #fff; }
+    .toggle-btn.unpaid-active { background: var(--danger); color: #fff; }
+
     .queue-input {
       width: 100%;
       padding: 6px 10px;
@@ -242,15 +246,15 @@
       border-top: 1px dashed var(--border);
       border-bottom: 1px dashed var(--border);
       padding: 8px 0;
-      min-height: 140px;
-      max-height: 240px;
+      min-height: 120px;
+      max-height: 220px;
       overflow-y: auto;
       margin-bottom: 10px;
     }
     .cart-empty {
       text-align: center;
       color: var(--muted);
-      padding: 36px 0;
+      padding: 32px 0;
       font-size: 0.9rem;
     }
     .cart-item {
@@ -361,10 +365,18 @@
       padding: 12px;
       background: #fffbeb;
     }
+    .kds-card.unpaid-border {
+      border-color: var(--danger);
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.16);
+    }
     .kds-card.served {
       border-color: var(--border);
       background: #f9fafb;
-      opacity: 0.72;
+      opacity: 0.78;
+    }
+    .kds-card.served.unpaid-border {
+      border-color: var(--danger);
+      opacity: 0.95;
     }
     .kds-top {
       display: flex;
@@ -373,17 +385,38 @@
       border-bottom: 1px dashed #d1d5db;
       padding-bottom: 8px;
       margin-bottom: 8px;
+      gap: 6px;
+      flex-wrap: wrap;
     }
     .kds-number { font-size: 1.45rem; font-weight: 900; color: var(--primary); }
+    .kds-badges { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
     .kds-badge {
       padding: 3px 8px;
       border-radius: 6px;
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       font-weight: 700;
       background: #111827;
       color: #fff;
     }
     .kds-badge.takeaway { background: var(--info); }
+    .pay-badge-paid {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #6ee7b7;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+    .pay-badge-unpaid {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fca5a5;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
     .kds-items { list-style: none; margin-bottom: 8px; }
     .kds-items li { font-size: 0.96rem; font-weight: 700; padding: 3px 0; }
     .kds-items li span.sub {
@@ -409,12 +442,14 @@
       border-radius: 8px;
       border: none;
       font-weight: 700;
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       cursor: pointer;
+      white-space: nowrap;
     }
-    .btn-serve { background: var(--success); color: #fff; flex: 1.4; }
+    .btn-serve { background: var(--success); color: #fff; flex: 1.3; }
+    .btn-collect { background: var(--accent); color: #111827; flex: 1.3; }
     .btn-edit { background: #e0e7ff; color: #1e40af; }
-    .btn-del { background: #fee2e2; color: #b91c1c; flex: 0.7; }
+    .btn-del { background: #fee2e2; color: #b91c1c; flex: 0.65; }
 
     .modal-backdrop {
       position: fixed;
@@ -438,7 +473,7 @@
       overflow: hidden;
       box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
     }
-    .modal.wide { max-width: 850px; }
+    .modal.wide { max-width: 900px; }
     .modal-header {
       padding: 14px 18px;
       background: #111827;
@@ -504,15 +539,16 @@
       padding: 10px;
       text-align: center;
     }
-    .stat-label { font-size: 0.76rem; color: var(--muted); }
-    .stat-val { font-size: 1.15rem; font-weight: 800; color: #111827; margin-top: 4px; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .stat-label { font-size: 0.75rem; color: var(--muted); }
+    .stat-val { font-size: 1.1rem; font-weight: 800; color: #111827; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
     th, td { padding: 8px 6px; border-bottom: 1px solid var(--border); text-align: left; }
     th { background: #f3f4f6; font-weight: 700; }
 
     @media (max-width: 1024px) {
       body { height: auto; overflow: auto; }
       .main-grid { grid-template-columns: 1fr; overflow: visible; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </head>
@@ -602,7 +638,14 @@
           <span class="total-amount" id="cartTotal">RM 0.00</span>
         </div>
 
-        <div class="toggle-group" style="margin-bottom:8px;">
+        <div style="margin-bottom:8px;">
+          <div class="toggle-group">
+            <button class="toggle-btn paid-active" id="statusPaidBtn" onclick="setPaidStatus(true)">✅ 已付款</button>
+            <button class="toggle-btn" id="statusUnpaidBtn" onclick="setPaidStatus(false)">⏳ 未付款 (取餐再付)</button>
+          </div>
+        </div>
+
+        <div class="toggle-group" id="payMethodGroup" style="margin-bottom:8px;">
           <button class="toggle-btn active" id="payCash" onclick="setPaymentMethod('Cash')">💵 Cash 现金</button>
           <button class="toggle-btn" id="payTng" onclick="setPaymentMethod('TNG')">📱 TNG 电子钱包</button>
         </div>
@@ -622,7 +665,10 @@
   <section class="panel">
     <div class="panel-header">
       <span>👨‍🍳 后厨实时出餐大屏 (KDS)</span>
-      <span id="pendingCountBadge" style="background:var(--primary);color:#fff;padding:2px 8px;border-radius:999px;font-size:0.78rem;">待出餐: 0</span>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span id="unpaidCountBadge" style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:999px;font-size:0.76rem;font-weight:700;display:none;">未付款: 0</span>
+        <span id="pendingCountBadge" style="background:var(--primary);color:#fff;padding:2px 8px;border-radius:999px;font-size:0.78rem;">待出餐: 0</span>
+      </div>
     </div>
     <div class="panel-body">
       <div class="kds-list" id="kdsList"></div>
@@ -669,7 +715,7 @@
       <button class="modal-close" onclick="closeModal('editOrderModal')">&times;</button>
     </div>
     <div class="modal-body">
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
         <div>
           <label style="font-size:0.78rem;font-weight:700;">号码牌</label>
           <input type="text" id="editQueueNum" class="queue-input" />
@@ -679,6 +725,13 @@
           <select id="editOrderType" class="queue-input">
             <option value="堂食">堂食</option>
             <option value="外卖/打包">外卖/打包</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.78rem;font-weight:700;">付款状态</label>
+          <select id="editIsPaid" class="queue-input">
+            <option value="true">✅ 已付款</option>
+            <option value="false">⏳ 未付款</option>
           </select>
         </div>
         <div>
@@ -740,7 +793,7 @@
             <th>类型</th>
             <th>菜品明细</th>
             <th>备注</th>
-            <th>支付</th>
+            <th>付款状态</th>
             <th>金额</th>
             <th>操作</th>
           </tr>
@@ -802,6 +855,7 @@
 
   let cart = [];
   let currentOrderType = '堂食';
+  let currentIsPaid = true;
   let currentPayMethod = 'Cash';
   let selectedRemarks = new Set();
   let orders = JSON.parse(localStorage.getItem('wowjiao_orders_v2') || '[]');
@@ -953,7 +1007,6 @@
     flavorCounts = {};
     FLAVORS.forEach(f => flavorCounts[f] = 0);
 
-    // 如果是修改已有订单明细，恢复原来的配比；如果是新点单，全部从 0 开始自己选
     if (existingItem && existingItem.flavors) {
       FLAVORS.forEach(f => {
         flavorCounts[f] = existingItem.flavors[f] || 0;
@@ -1070,11 +1123,20 @@
     document.getElementById('typeTakeaway').classList.toggle('active', type === '外卖/打包');
   }
 
+  function setPaidStatus(isPaid) {
+    currentIsPaid = isPaid;
+    const paidBtn = document.getElementById('statusPaidBtn');
+    const unpaidBtn = document.getElementById('statusUnpaidBtn');
+    paidBtn.className = 'toggle-btn' + (isPaid ? ' paid-active' : '');
+    unpaidBtn.className = 'toggle-btn' + (!isPaid ? ' unpaid-active' : '');
+    document.getElementById('cashCalcRow').style.display = (isPaid && currentPayMethod === 'Cash') ? 'grid' : 'none';
+  }
+
   function setPaymentMethod(method) {
     currentPayMethod = method;
     document.getElementById('payCash').classList.toggle('active', method === 'Cash');
     document.getElementById('payTng').classList.toggle('active', method === 'TNG');
-    document.getElementById('cashCalcRow').style.display = method === 'Cash' ? 'grid' : 'none';
+    document.getElementById('cashCalcRow').style.display = (currentIsPaid && method === 'Cash') ? 'grid' : 'none';
   }
 
   function toggleRemarkChip(el, text) {
@@ -1130,6 +1192,7 @@
     document.querySelectorAll('#quickRemarks .remark-chip').forEach(c => c.classList.remove('active'));
     document.getElementById('remarkInput').value = '';
     document.getElementById('cashReceivedInput').value = '';
+    setPaidStatus(true);
     renderCart();
   }
 
@@ -1164,6 +1227,7 @@
       queueNumber: document.getElementById('queueNumberInput').value.trim() || ('A' + queueCounter),
       orderType: currentOrderType,
       paymentMethod: currentPayMethod,
+      isPaid: currentIsPaid,
       remarks: allRemarks.join(' | '),
       items: JSON.parse(JSON.stringify(cart)),
       total: total,
@@ -1190,10 +1254,23 @@
   function renderKDS() {
     const container = document.getElementById('kdsList');
     const pendingOrders = orders.filter(o => o.status === 'pending');
-    const servedOrders = orders.filter(o => o.status === 'served').slice(0, 8);
+    // 已出餐但未付款的订单也保留显示，防止收银漏收款
+    const servedOrders = orders.filter(o => o.status === 'served');
+    const unpaidServed = servedOrders.filter(o => o.isPaid === false);
+    const paidServed = servedOrders.filter(o => o.isPaid !== false).slice(0, 6);
+
+    const totalUnpaidCount = orders.filter(o => o.isPaid === false).length;
+    const unpaidBadge = document.getElementById('unpaidCountBadge');
+    if (totalUnpaidCount > 0) {
+      unpaidBadge.style.display = 'inline-block';
+      unpaidBadge.textContent = `未付款: ${totalUnpaidCount}`;
+    } else {
+      unpaidBadge.style.display = 'none';
+    }
+
     document.getElementById('pendingCountBadge').textContent = `待出餐: ${pendingOrders.length}`;
 
-    const displayList = [...pendingOrders, ...servedOrders];
+    const displayList = [...pendingOrders, ...unpaidServed, ...paidServed];
     if (displayList.length === 0) {
       container.innerHTML = '<div class="cart-empty">暂无订单，等待前台下单...</div>';
       return;
@@ -1202,8 +1279,9 @@
     container.innerHTML = '';
     displayList.forEach(order => {
       const isServed = order.status === 'served';
+      const isPaid = order.isPaid !== false;
       const card = document.createElement('div');
-      card.className = `kds-card ${isServed ? 'served' : ''}`;
+      card.className = `kds-card ${isServed ? 'served' : ''} ${!isPaid ? 'unpaid-border' : ''}`;
 
       const itemsHtml = order.items.map(it => `
         <li>
@@ -1212,27 +1290,58 @@
         </li>
       `).join('');
 
+      const payTagHtml = isPaid
+        ? `<span class="pay-badge-paid">✅ 已付 · ${order.paymentMethod}</span>`
+        : `<span class="pay-badge-unpaid">⚠️ 未付款 · RM ${order.total.toFixed(2)}</span>`;
+
       card.innerHTML = `
         <div class="kds-top">
           <div>
             <span class="kds-number">#${order.queueNumber}</span>
-            <span style="font-size:0.78rem;color:var(--muted);margin-left:6px;">${order.timestamp} · ${order.paymentMethod}</span>
+            <span style="font-size:0.78rem;color:var(--muted);margin-left:6px;">${order.timestamp}</span>
           </div>
-          <span class="kds-badge ${order.orderType !== '堂食' ? 'takeaway' : ''}">${order.orderType}</span>
+          <div class="kds-badges">
+            ${payTagHtml}
+            <span class="kds-badge ${order.orderType !== '堂食' ? 'takeaway' : ''}">${order.orderType}</span>
+          </div>
         </div>
         <ul class="kds-items">${itemsHtml}</ul>
         ${order.remarks ? `<div class="kds-remark">📝 备注：${order.remarks}</div>` : ''}
         <div class="kds-actions">
+          ${!isPaid
+            ? `<button class="btn-kds btn-collect" onclick="confirmCollectPayment('${order.id}')">💰 确认已收款</button>`
+            : ''
+          }
           ${!isServed
             ? `<button class="btn-kds btn-serve" onclick="markOrderServed('${order.id}')">✅ 标记出餐</button>`
             : `<button class="btn-kds" style="background:#e5e7eb;color:#374151;" onclick="reopenOrder('${order.id}')">↩️ 恢复待出餐</button>`
           }
-          <button class="btn-kds btn-edit" onclick="openEditOrderModal('${order.id}')">✏️ 修改订单</button>
-          <button class="btn-kds btn-del" onclick="deleteOrder('${order.id}')">🗑️ 删除</button>
+          <button class="btn-kds btn-edit" onclick="openEditOrderModal('${order.id}')">✏️ 修改</button>
+          <button class="btn-kds btn-del" onclick="deleteOrder('${order.id}')">🗑️</button>
         </div>
       `;
       container.appendChild(card);
     });
+  }
+
+  // 一键补收未付款订单
+  function confirmCollectPayment(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    const useTng = confirm(
+      `确认号码牌【#${order.queueNumber}】已收款 RM ${order.total.toFixed(2)} 吗？\n\n` +
+      `• 点击【确定】记录为：📱 TNG 电子钱包已付款\n` +
+      `• 点击【取消】记录为：💵 Cash 现金已付款`
+    );
+    order.isPaid = true;
+    order.paymentMethod = useTng ? 'TNG' : 'Cash';
+    order.updatedAt = Date.now();
+    saveOrdersLocally();
+    renderKDS();
+    if (document.getElementById('salesModal').classList.contains('open')) {
+      renderSalesModal();
+    }
+    pushSyncAction('update', order);
   }
 
   function markOrderServed(orderId) {
@@ -1278,6 +1387,7 @@
     document.getElementById('editModalTitle').textContent = `✏️ 修改订单 #${editingOrderObj.queueNumber}`;
     document.getElementById('editQueueNum').value = editingOrderObj.queueNumber;
     document.getElementById('editOrderType').value = editingOrderObj.orderType;
+    document.getElementById('editIsPaid').value = editingOrderObj.isPaid === false ? 'false' : 'true';
     document.getElementById('editPayMethod').value = editingOrderObj.paymentMethod;
     document.getElementById('editRemarkInput').value = editingOrderObj.remarks || '';
 
@@ -1342,6 +1452,7 @@
     if (!editingOrderObj || editingOrderObj.items.length === 0) return;
     editingOrderObj.queueNumber = document.getElementById('editQueueNum').value.trim() || editingOrderObj.queueNumber;
     editingOrderObj.orderType = document.getElementById('editOrderType').value;
+    editingOrderObj.isPaid = document.getElementById('editIsPaid').value === 'true';
     editingOrderObj.paymentMethod = document.getElementById('editPayMethod').value;
     editingOrderObj.remarks = document.getElementById('editRemarkInput').value.trim();
     editingOrderObj.total = editingOrderObj.items.reduce((sum, i) => sum + i.price * i.qty, 0);
@@ -1361,15 +1472,22 @@
   }
 
   function calculateTodayStats() {
-    let totalRev = 0, cashRev = 0, tngRev = 0;
+    let totalRev = 0, paidRev = 0, unpaidRev = 0, unpaidCount = 0;
+    let cashRev = 0, tngRev = 0;
     let totalDumplings = 0, totalNoodles = 0;
     const flavorTotals = {};
     FLAVORS.forEach(f => flavorTotals[f] = 0);
 
     orders.forEach(o => {
       totalRev += o.total;
-      if (o.paymentMethod === 'Cash') cashRev += o.total;
-      else tngRev += o.total;
+      if (o.isPaid === false) {
+        unpaidRev += o.total;
+        unpaidCount++;
+      } else {
+        paidRev += o.total;
+        if (o.paymentMethod === 'Cash') cashRev += o.total;
+        else tngRev += o.total;
+      }
 
       o.items.forEach(it => {
         if (it.category === 'noodle') totalNoodles += it.qty;
@@ -1387,6 +1505,9 @@
       dateStr: getLocalDateStr(),
       orderCount: orders.length,
       totalRev,
+      paidRev,
+      unpaidRev,
+      unpaidCount,
       cashRev,
       tngRev,
       totalDumplings,
@@ -1405,10 +1526,10 @@
     const s = calculateTodayStats();
 
     document.getElementById('salesStatsGrid').innerHTML = `
-      <div class="stat-card"><div class="stat-label">今日总营业额 (${s.orderCount}单)</div><div class="stat-val" style="color:var(--primary);">RM ${s.totalRev.toFixed(2)}</div></div>
-      <div class="stat-card"><div class="stat-label">Cash / TNG</div><div class="stat-val" style="font-size:0.95rem;">RM ${s.cashRev.toFixed(2)} / RM ${s.tngRev.toFixed(2)}</div></div>
-      <div class="stat-card"><div class="stat-label">饺子总消耗 (含附送)</div><div class="stat-val">${s.totalDumplings} 粒</div></div>
-      <div class="stat-card"><div class="stat-label">面食总销量</div><div class="stat-val">${s.totalNoodles} 碗</div></div>
+      <div class="stat-card"><div class="stat-label">已实收总营业额 (${s.orderCount - s.unpaidCount}单)</div><div class="stat-val" style="color:var(--success);">RM ${s.paidRev.toFixed(2)}</div></div>
+      <div class="stat-card"><div class="stat-label">待收未付款 (${s.unpaidCount}单)</div><div class="stat-val" style="color:${s.unpaidRev > 0 ? 'var(--danger)' : '#6b7280'};">RM ${s.unpaidRev.toFixed(2)}</div></div>
+      <div class="stat-card"><div class="stat-label">实收 Cash / TNG</div><div class="stat-val" style="font-size:0.9rem;">RM ${s.cashRev.toFixed(2)} / RM ${s.tngRev.toFixed(2)}</div></div>
+      <div class="stat-card"><div class="stat-label">饺子 / 面食总销量</div><div class="stat-val" style="font-size:0.95rem;">${s.totalDumplings} 粒 / ${s.totalNoodles} 碗</div></div>
     `;
 
     const flavorStr = FLAVORS.map(f => `${f} <b>${s.flavorTotals[f] || 0}</b> 粒`).join(' ｜ ');
@@ -1418,6 +1539,11 @@
     tbody.innerHTML = '';
     orders.forEach(o => {
       const itemsStr = o.items.map(i => `${i.name}x${i.qty}(${i.detailText})`).join('; ');
+      const isPaid = o.isPaid !== false;
+      const payStatusHtml = isPaid
+        ? `<span class="pay-badge-paid">✅ 已付(${o.paymentMethod})</span>`
+        : `<span class="pay-badge-unpaid">⏳ 未付款</span>`;
+
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${o.timestamp}</td>
@@ -1425,9 +1551,10 @@
         <td>${o.orderType}</td>
         <td>${itemsStr}</td>
         <td>${o.remarks || '-'}</td>
-        <td>${o.paymentMethod}</td>
+        <td>${payStatusHtml}</td>
         <td><strong>RM ${o.total.toFixed(2)}</strong></td>
         <td style="white-space:nowrap;">
+          ${!isPaid ? `<button class="remark-chip" style="background:#fef3c7;border-color:#f59e0b;" onclick="confirmCollectPayment('${o.id}')">💰收款</button>` : ''}
           <button class="remark-chip" onclick="openEditOrderModal('${o.id}')">✏️</button>
           <button class="remark-chip" style="color:#b91c1c;" onclick="deleteOrder('${o.id}')">🗑️</button>
         </td>
@@ -1442,12 +1569,16 @@
       return;
     }
     const s = calculateTodayStats();
+    let warnText = '';
+    if (s.unpaidCount > 0) {
+      warnText = `⚠️ 注意：当前仍有 ${s.unpaidCount} 笔未付款订单（共 RM ${s.unpaidRev.toFixed(2)}）！\n\n`;
+    }
     const confirmMsg =
-      `确认对【${s.dateStr}】进行日结结算吗？\n\n` +
+      `${warnText}确认对【${s.dateStr}】进行日结结算吗？\n\n` +
       `• 总订单数：${s.orderCount} 单\n` +
-      `• 今日总营业额：RM ${s.totalRev.toFixed(2)}\n` +
-      `• Cash 现金：RM ${s.cashRev.toFixed(2)} ｜ TNG：RM ${s.tngRev.toFixed(2)}\n\n` +
-      `点击确定后，系统将自动把以上结算汇总写入 Google Sheet 的《${s.dateStr}》表底及《每日营收汇总》总表，并清空当前屏幕准备下一天营业！`;
+      `• 已实收营业额：RM ${s.paidRev.toFixed(2)}（Cash: RM ${s.cashRev.toFixed(2)} ｜ TNG: RM ${s.tngRev.toFixed(2)}）\n` +
+      `• 未收款金额：RM ${s.unpaidRev.toFixed(2)}\n\n` +
+      `点击确定后，系统将把结算汇总写入 Google Sheet 并重置号码牌为 A01。`;
 
     if (!confirm(confirmMsg)) return;
 
@@ -1472,18 +1603,19 @@
     renderSalesModal();
     updateSyncUI('online', '已完成日结归档');
     closeModal('salesModal');
-    alert(`✅ 日结完成！总营业额 RM ${s.totalRev.toFixed(2)} 已归档至 Google Sheet，号码牌已重置为 A01。`);
+    alert(`✅ 日结完成！实收营业额 RM ${s.paidRev.toFixed(2)} 已归档至 Google Sheet，号码牌已重置为 A01。`);
   }
 
   function exportCSV() {
     if (orders.length === 0) return alert('暂无销售数据可导出');
-    const headers = ['订单ID', '日期', '时间', '号码牌', '用餐方式', '支付方式', '菜品明细', '备注', '总金额(RM)', '状态'];
+    const headers = ['订单ID', '日期', '时间', '号码牌', '用餐方式', '付款状态', '支付方式', '菜品明细', '备注', '总金额(RM)', '出餐状态'];
     const rows = orders.map(o => [
       o.id,
       o.dateStr || '',
       o.timestamp,
       o.queueNumber,
       o.orderType,
+      o.isPaid === false ? '未付款' : '已付款',
       o.paymentMethod,
       '"' + o.items.map(i => `${i.name}x${i.qty}[${i.detailText}]`).join(' ; ').replace(/"/g, '""') + '"',
       '"' + (o.remarks || '').replace(/"/g, '""') + '"',
