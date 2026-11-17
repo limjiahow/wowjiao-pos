@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WOWJIAO 摆摊 POS 系统 (付款状态+按日分表版)</title>
+  <title>WOWJIAO 摆摊 POS 系统 (畅销菜品分析+付款状态版)</title>
   <style>
     :root {
       --primary: #d9381e;
@@ -473,7 +473,7 @@
       overflow: hidden;
       box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
     }
-    .modal.wide { max-width: 900px; }
+    .modal.wide { max-width: 960px; }
     .modal-header {
       padding: 14px 18px;
       background: #111827;
@@ -526,6 +526,7 @@
     }
     .btn-fill-all:hover { background: #e5e7eb; }
 
+    /* 畅销菜肴排行榜样式 */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -541,6 +542,73 @@
     }
     .stat-label { font-size: 0.75rem; color: var(--muted); }
     .stat-val { font-size: 1.1rem; font-weight: 800; color: #111827; margin-top: 4px; }
+
+    .analytics-two-col {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .analytics-box {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      background: #ffffff;
+    }
+    .analytics-box-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #f3f4f6;
+      font-weight: 800;
+      font-size: 0.92rem;
+    }
+    .rank-row {
+      margin-bottom: 9px;
+    }
+    .rank-row:last-child { margin-bottom: 0; }
+    .rank-top-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      margin-bottom: 4px;
+    }
+    .rank-name { font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    .rank-num { color: var(--muted); font-size: 0.8rem; font-weight: 600; }
+    .bar-track {
+      width: 100%;
+      height: 8px;
+      background: #f3f4f6;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--primary);
+      transition: width 0.3s ease;
+    }
+    .bar-fill.flavor { background: var(--accent); }
+    .mini-summary-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px dashed var(--border);
+      font-size: 0.78rem;
+    }
+    .summary-pill {
+      background: #f3f4f6;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+      color: #374151;
+    }
+
     table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
     th, td { padding: 8px 6px; border-bottom: 1px solid var(--border); text-align: left; }
     th { background: #f3f4f6; font-weight: 700; }
@@ -549,6 +617,7 @@
       body { height: auto; overflow: auto; }
       .main-grid { grid-template-columns: 1fr; overflow: visible; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .analytics-two-col { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -577,7 +646,7 @@
     </div>
     <button class="btn-top" onclick="manualPullSync()">🔄 立即同步</button>
     <button class="btn-top" onclick="openCloudModal()">☁️ 云端与密码</button>
-    <button class="btn-top primary" onclick="openSalesModal()">📜 今日销售与日结</button>
+    <button class="btn-top primary" onclick="openSalesModal()">📊 畅销榜与日结</button>
     <button class="btn-top" onclick="lockSystem()" title="离开摊位一键锁屏">🔒 锁屏</button>
   </div>
 </header>
@@ -779,12 +848,35 @@
 <div class="modal-backdrop" id="salesModal">
   <div class="modal wide">
     <div class="modal-header">
-      <span id="salesModalHeaderTitle">📜 今日销售分析与日结结算</span>
+      <span id="salesModalHeaderTitle">📊 今日畅销榜与日结结算</span>
       <button class="modal-close" onclick="closeModal('salesModal')">&times;</button>
     </div>
     <div class="modal-body">
       <div class="stats-grid" id="salesStatsGrid"></div>
-      <div id="flavorBreakdownBox" style="background:#fffbeb;border:1px solid #fde68a;padding:10px;border-radius:8px;margin-bottom:12px;font-size:0.86rem;"></div>
+
+      <!-- 畅销菜肴与口味双栏排行榜 -->
+      <div class="analytics-two-col">
+        <div class="analytics-box">
+          <div class="analytics-box-header">
+            <span>🏆 畅销菜肴排行榜</span>
+            <div style="display:flex;gap:4px;">
+              <button class="remark-chip active" id="sortByQtyBtn" onclick="setDishSortMode('qty')">按份数</button>
+              <button class="remark-chip" id="sortByRevBtn" onclick="setDishSortMode('rev')">按营收</button>
+            </div>
+          </div>
+          <div id="dishRankingContainer"></div>
+        </div>
+
+        <div class="analytics-box">
+          <div class="analytics-box-header">
+            <span>🥟 饺子口味热度榜</span>
+            <span style="font-size:0.76rem;color:var(--muted);" id="totalDumplingBadge">共 0 粒</span>
+          </div>
+          <div id="flavorRankingContainer"></div>
+          <div class="mini-summary-pills" id="extraRatioPills"></div>
+        </div>
+      </div>
+
       <table>
         <thead>
           <tr>
@@ -826,7 +918,7 @@
       <input type="text" id="webhookUrlInput" class="remark-input" placeholder="https://script.google.com/macros/s/xxxx/exec" />
 
       <p style="font-size:0.8rem;color:var(--muted);line-height:1.45;">
-        系统每天会自动在 Google Sheet 中以当天日期（如 <code>2026-11-16</code>）新建独立工作表，收摊点击日结后自动结算总营业额。
+        系统每天会自动在 Google Sheet 中以当天日期（如 <code>2026-11-17</code>）新建独立工作表，收摊点击日结后自动结算总营业额。
       </p>
       <div id="testResultMsg" style="font-size:0.84rem;margin-top:8px;font-weight:600;"></div>
     </div>
@@ -857,6 +949,7 @@
   let currentOrderType = '堂食';
   let currentIsPaid = true;
   let currentPayMethod = 'Cash';
+  let dishSortMode = 'qty'; // 'qty' 或 'rev'
   let selectedRemarks = new Set();
   let orders = JSON.parse(localStorage.getItem('wowjiao_orders_v2') || '[]');
   let queueCounter = parseInt(localStorage.getItem('wowjiao_queue_counter') || '1', 10);
@@ -1254,7 +1347,6 @@
   function renderKDS() {
     const container = document.getElementById('kdsList');
     const pendingOrders = orders.filter(o => o.status === 'pending');
-    // 已出餐但未付款的订单也保留显示，防止收银漏收款
     const servedOrders = orders.filter(o => o.status === 'served');
     const unpaidServed = servedOrders.filter(o => o.isPaid === false);
     const paidServed = servedOrders.filter(o => o.isPaid !== false).slice(0, 6);
@@ -1324,7 +1416,6 @@
     });
   }
 
-  // 一键补收未付款订单
   function confirmCollectPayment(orderId) {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
@@ -1471,15 +1562,31 @@
     closeModal('editOrderModal');
   }
 
+  function setDishSortMode(mode) {
+    dishSortMode = mode;
+    document.getElementById('sortByQtyBtn').classList.toggle('active', mode === 'qty');
+    document.getElementById('sortByRevBtn').classList.toggle('active', mode === 'rev');
+    renderSalesModal();
+  }
+
   function calculateTodayStats() {
     let totalRev = 0, paidRev = 0, unpaidRev = 0, unpaidCount = 0;
     let cashRev = 0, tngRev = 0;
     let totalDumplings = 0, totalNoodles = 0;
+    let boiledPortions = 0, friedPortions = 0;
+    let dineInOrders = 0, takeawayOrders = 0;
+
     const flavorTotals = {};
     FLAVORS.forEach(f => flavorTotals[f] = 0);
 
+    // 统计每道菜肴的销量与营收
+    const dishMap = {};
+
     orders.forEach(o => {
       totalRev += o.total;
+      if (o.orderType === '堂食') dineInOrders++;
+      else takeawayOrders++;
+
       if (o.isPaid === false) {
         unpaidRev += o.total;
         unpaidCount++;
@@ -1490,7 +1597,21 @@
       }
 
       o.items.forEach(it => {
-        if (it.category === 'noodle') totalNoodles += it.qty;
+        // 按菜品名称累加（例如 "水饺 (6粒)"、"煎饺 (6粒)"、"冬菇肉酱拉面"）
+        const dishName = it.name || '未知菜品';
+        if (!dishMap[dishName]) {
+          dishMap[dishName] = { name: dishName, qty: 0, revenue: 0 };
+        }
+        dishMap[dishName].qty += it.qty;
+        dishMap[dishName].revenue += (it.price * it.qty);
+
+        if (it.category === 'noodle') {
+          totalNoodles += it.qty;
+        } else if (it.category === 'dumpling') {
+          if (it.cookMethod === '煎饺') friedPortions += it.qty;
+          else boiledPortions += it.qty;
+        }
+
         if (it.flavors) {
           Object.entries(it.flavors).forEach(([f, cnt]) => {
             const pieces = cnt * it.qty;
@@ -1500,6 +1621,18 @@
         }
       });
     });
+
+    const dishRanking = Object.values(dishMap).sort((a, b) => {
+      if (dishSortMode === 'rev') {
+        return b.revenue - a.revenue || b.qty - a.qty;
+      }
+      return b.qty - a.qty || b.revenue - a.revenue;
+    });
+
+    const flavorRanking = FLAVORS.map(f => ({
+      name: f,
+      pieces: flavorTotals[f] || 0
+    })).sort((a, b) => b.pieces - a.pieces);
 
     return {
       dateStr: getLocalDateStr(),
@@ -1512,28 +1645,91 @@
       tngRev,
       totalDumplings,
       totalNoodles,
-      flavorTotals
+      boiledPortions,
+      friedPortions,
+      dineInOrders,
+      takeawayOrders,
+      flavorTotals,
+      dishRanking,
+      flavorRanking
     };
   }
 
   function openSalesModal() {
-    document.getElementById('salesModalHeaderTitle').textContent = `📜 [${getLocalDateStr()}] 销售分析与日结结算`;
+    document.getElementById('salesModalHeaderTitle').textContent = `📊 [${getLocalDateStr()}] 畅销菜品榜与日结结算`;
     renderSalesModal();
     document.getElementById('salesModal').classList.add('open');
   }
 
   function renderSalesModal() {
     const s = calculateTodayStats();
+    const topDishName = s.dishRanking.length > 0 ? `${s.dishRanking[0].name} (${s.dishRanking[0].qty}份)` : '暂无销量';
 
     document.getElementById('salesStatsGrid').innerHTML = `
-      <div class="stat-card"><div class="stat-label">已实收总营业额 (${s.orderCount - s.unpaidCount}单)</div><div class="stat-val" style="color:var(--success);">RM ${s.paidRev.toFixed(2)}</div></div>
+      <div class="stat-card"><div class="stat-label">已实收营业额 (${s.orderCount - s.unpaidCount}单)</div><div class="stat-val" style="color:var(--success);">RM ${s.paidRev.toFixed(2)}</div></div>
       <div class="stat-card"><div class="stat-label">待收未付款 (${s.unpaidCount}单)</div><div class="stat-val" style="color:${s.unpaidRev > 0 ? 'var(--danger)' : '#6b7280'};">RM ${s.unpaidRev.toFixed(2)}</div></div>
       <div class="stat-card"><div class="stat-label">实收 Cash / TNG</div><div class="stat-val" style="font-size:0.9rem;">RM ${s.cashRev.toFixed(2)} / RM ${s.tngRev.toFixed(2)}</div></div>
-      <div class="stat-card"><div class="stat-label">饺子 / 面食总销量</div><div class="stat-val" style="font-size:0.95rem;">${s.totalDumplings} 粒 / ${s.totalNoodles} 碗</div></div>
+      <div class="stat-card"><div class="stat-label">🔥 今日销量冠军</div><div class="stat-val" style="font-size:0.92rem;color:var(--primary);">${topDishName}</div></div>
     `;
 
-    const flavorStr = FLAVORS.map(f => `${f} <b>${s.flavorTotals[f] || 0}</b> 粒`).join(' ｜ ');
-    document.getElementById('flavorBreakdownBox').innerHTML = `<strong>🥟 各口味饺子总消耗明细：</strong>${flavorStr}`;
+    // 渲染畅销菜肴排行榜
+    const dishBox = document.getElementById('dishRankingContainer');
+    if (s.dishRanking.length === 0) {
+      dishBox.innerHTML = '<div style="text-align:center;color:var(--muted);padding:24px 0;font-size:0.84rem;">今日暂无菜品销售记录</div>';
+    } else {
+      const maxVal = dishSortMode === 'rev'
+        ? Math.max(...s.dishRanking.map(d => d.revenue), 1)
+        : Math.max(...s.dishRanking.map(d => d.qty), 1);
+
+      const medals = ['🥇', '🥈', '🥉'];
+      dishBox.innerHTML = s.dishRanking.map((d, idx) => {
+        const badge = idx < 3 ? medals[idx] : `<span style="display:inline-block;width:18px;text-align:center;color:#6b7280;font-size:0.78rem;">#${idx + 1}</span>`;
+        const pct = dishSortMode === 'rev'
+          ? Math.round((d.revenue / maxVal) * 100)
+          : Math.round((d.qty / maxVal) * 100);
+        const revShare = s.totalRev > 0 ? Math.round((d.revenue / s.totalRev) * 100) : 0;
+
+        return `
+          <div class="rank-row">
+            <div class="rank-top-line">
+              <span class="rank-name">${badge} ${d.name}</span>
+              <span class="rank-num"><b>${d.qty}</b> 份 · <b>RM ${d.revenue.toFixed(2)}</b> (${revShare}%)</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:${pct}%;"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 渲染 4 种饺子口味热度榜
+    document.getElementById('totalDumplingBadge').textContent = `总消耗 ${s.totalDumplings} 粒`;
+    const flavorBox = document.getElementById('flavorRankingContainer');
+    const maxPieces = Math.max(...s.flavorRanking.map(f => f.pieces), 1);
+
+    flavorBox.innerHTML = s.flavorRanking.map((f, idx) => {
+      const pct = s.totalDumplings > 0 ? Math.round((f.pieces / maxPieces) * 100) : 0;
+      const share = s.totalDumplings > 0 ? Math.round((f.pieces / s.totalDumplings) * 100) : 0;
+      return `
+        <div class="rank-row">
+          <div class="rank-top-line">
+            <span class="rank-name">${idx === 0 && f.pieces > 0 ? '🔥' : '•'} ${f.name}</span>
+            <span class="rank-num"><b>${f.pieces}</b> 粒 (${share}%)</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill flavor" style="width:${pct}%;"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    document.getElementById('extraRatioPills').innerHTML = `
+      <span class="summary-pill">🥟 水饺: ${s.boiledPortions} 份</span>
+      <span class="summary-pill">🍳 煎饺: ${s.friedPortions} 份</span>
+      <span class="summary-pill">🍜 面食: ${s.totalNoodles} 碗</span>
+      <span class="summary-pill">🍽️ 堂食 ${s.dineInOrders} / 打包 ${s.takeawayOrders}</span>
+    `;
 
     const tbody = document.getElementById('salesTableBody');
     tbody.innerHTML = '';
@@ -1569,6 +1765,9 @@
       return;
     }
     const s = calculateTodayStats();
+    const topDish = s.dishRanking[0] ? `${s.dishRanking[0].name}x${s.dishRanking[0].qty}` : '-';
+    const topFlavor = s.flavorRanking[0] ? `${s.flavorRanking[0].name}(${s.flavorRanking[0].pieces}粒)` : '-';
+
     let warnText = '';
     if (s.unpaidCount > 0) {
       warnText = `⚠️ 注意：当前仍有 ${s.unpaidCount} 笔未付款订单（共 RM ${s.unpaidRev.toFixed(2)}）！\n\n`;
@@ -1577,6 +1776,7 @@
       `${warnText}确认对【${s.dateStr}】进行日结结算吗？\n\n` +
       `• 总订单数：${s.orderCount} 单\n` +
       `• 已实收营业额：RM ${s.paidRev.toFixed(2)}（Cash: RM ${s.cashRev.toFixed(2)} ｜ TNG: RM ${s.tngRev.toFixed(2)}）\n` +
+      `• 最畅销菜品：${topDish} ｜ 最热口味：${topFlavor}\n` +
       `• 未收款金额：RM ${s.unpaidRev.toFixed(2)}\n\n` +
       `点击确定后，系统将把结算汇总写入 Google Sheet 并重置号码牌为 A01。`;
 
